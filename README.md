@@ -1,5 +1,12 @@
 ## Foundry
 
+## Stablecoin Project
+This stablecoin has:
+
+- Relative Stability (Anchored or Pegged to 1 USD) -> Using Chainlink Price feed -> Setting a function to exchange ETH & BTC -> $
+- Stability Mechanism (Minting): Algorithmic (Decentralized) -> People can only mint the stablecoin with enough collateral (coded)
+- Collateral: Exogenous (Crypto) -> wETH / wBTC
+
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
 Foundry consists of:
