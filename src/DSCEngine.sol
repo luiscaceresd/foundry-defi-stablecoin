@@ -63,7 +63,7 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////
     // State Variables //
     ////////////////////
-    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e18;
+    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
     uint256 private constant LIQUIDATION_THRESHOLD = 50;
     uint256 private constant LIQUIDATION_PRECISION = 100;
