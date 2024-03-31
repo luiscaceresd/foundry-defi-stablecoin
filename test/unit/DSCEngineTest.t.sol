@@ -83,7 +83,7 @@ contract DSCEngineTest is Test {
     }
 
     function testRevertsWithUnapprovedCollateral() public {
-        ERC20Mock ranToken = new ERC20Mock("RAN", "RAN", user, amountCollateral);
+        ERC20Mock ranToken = new ERC20Mock();
         vm.startPrank(user);
         vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
         dsce.depositCollateral(address(ranToken), amountCollateral);
@@ -146,5 +146,52 @@ contract DSCEngineTest is Test {
     function testCanMintWithDepositedCollateral() public depositedCollateralAndMintedDsc {
         uint256 userBalance = dsc.balanceOf(user);
         assertEq(userBalance, amountToMint);
+    }
+
+    //////////////////////////////////////
+    // mintDsc Tests ////////////////////
+    /////////////////////////////////////
+
+    function testRevertsIfMintAmountIsZero() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateral(weth, amountCollateral);
+        vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
+        dsce.mintDsc(0);
+        vm.stopPrank();
+    }
+
+    function testCanMintDsc() public depositedCollateral {
+        vm.prank(user);
+        dsce.mintDsc(amountToMint);
+
+        uint256 userBalance = dsc.balanceOf(user);
+        assertEq(userBalance, amountToMint);
+    }    
+
+    //////////////////////////////////////
+    // burnDsc Tests ////////////////////
+    /////////////////////////////////////
+
+    function testRevertsIfBurnAmountIsZero() public depositedCollateralAndMintedDsc {
+
+        vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
+        dsce.burnDsc(0);
+    }
+
+    function testCantBurnMoreThanUserHas() public {
+        vm.prank(user);
+        vm.expectRevert();
+        dsce.burnDsc(1);
+    }
+
+    function testCanBurnDsc() public depositedCollateralAndMintedDsc {
+        vm.startPrank(user);
+        dsc.approve(address(dsce), amountToMint);
+        dsce.burnDsc(amountToMint);
+        vm.stopPrank();
+
+        uint256 userBalance = dsc.balanceOf(user);
+        assertEq(userBalance, 0);
     }
 }

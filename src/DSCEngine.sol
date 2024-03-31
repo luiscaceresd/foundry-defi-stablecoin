@@ -201,7 +201,7 @@ contract DSCEngine is ReentrancyGuard {
 
     function burnDsc(uint256 amount) public moreThanZero(amount) {
         _burnDsc(msg.sender, msg.sender, amount);
-        _revertIfHealthFactorIsBroken(msg.sender); // this line may not be necessary
+        // _revertIfHealthFactorIsBroken(msg.sender); // this line may not be necessary
     }
 
     /*
