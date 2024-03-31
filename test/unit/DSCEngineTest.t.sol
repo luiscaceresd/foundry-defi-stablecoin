@@ -21,8 +21,9 @@ contract DSCEngineTest is Test {
     address btcUsdPriceFeed;
     address weth;
 
-    address public USER = makeAddr("user");
-    uint256 public constant AMOUNT_COLLATERAL = 10 ether;
+    address public user = address(1);
+    uint256 public amountCollateral = 10 ether;
+    uint256 public amountToMint = 100 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
     function setUp() public {
@@ -30,7 +31,7 @@ contract DSCEngineTest is Test {
         (dsc, dsce, config) = deployer.run();
         (ethUsdPriceFeed,, weth,,) = config.activeNetworkConfig();
 
-        ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE);
+        ERC20Mock(weth).mint(user, STARTING_ERC20_BALANCE);
     }
 
     ///////////////////////////////////
@@ -73,8 +74,8 @@ contract DSCEngineTest is Test {
     /////////////////////////////
 
     function testRevertsIfCollateralZero() public {
-        vm.startPrank(USER);
-        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
 
         vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
         dsce.depositCollateral(weth, 0);
@@ -82,46 +83,68 @@ contract DSCEngineTest is Test {
     }
 
     function testRevertsWithUnapprovedCollateral() public {
-        ERC20Mock ranToken = new ERC20Mock("RAN", "RAN", USER, AMOUNT_COLLATERAL);
-        vm.startPrank(USER);
+        ERC20Mock ranToken = new ERC20Mock("RAN", "RAN", user, amountCollateral);
+        vm.startPrank(user);
         vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
-        dsce.depositCollateral(address(ranToken), AMOUNT_COLLATERAL);
+        dsce.depositCollateral(address(ranToken), amountCollateral);
         vm.stopPrank();
     }
 
     modifier depositedCollateral() {
-        vm.startPrank(USER);
-        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
-        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateral(weth, amountCollateral);
         vm.stopPrank();
         _;
     }
 
+    function testCanDepositCollateralWithoutMinting() public depositedCollateral {
+        uint256 userBalance = dsc.balanceOf(user);
+        assertEq(userBalance, 0);
+    }
+
+
     function testCanDepositCollateralAndGetAccountInfo() public depositedCollateral {
-        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dsce.getAccountInformation(USER);
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dsce.getAccountInformation(user);
 
         uint256 expectedTotalDscMinted = 0;
         uint256 expectedDepositAmount = dsce.getTokenAmountFromUsd(weth, collateralValueInUsd);
         assertEq(totalDscMinted, expectedTotalDscMinted);
-        assertEq(AMOUNT_COLLATERAL, expectedDepositAmount);
+        assertEq(amountCollateral, expectedDepositAmount);
     }
 
     function testDepositCollateralEmitsEvent() public {
-        vm.startPrank(USER);
-        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
         vm.expectEmit(true, true, true, false, address(dsce));
-        emit CollateralDeposited(USER,weth,AMOUNT_COLLATERAL);
-        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        emit CollateralDeposited(user,weth,amountCollateral);
+        dsce.depositCollateral(weth, amountCollateral);
     }
 
-    //  function testCollateralDepositEmitsOutput() public {
-    //     vm.recordLogs();
-    //     vm.startPrank(USER);
-    //     ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
-    //     dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
-    //     Vm.Log[] memory entries = vm.getRecordedLogs();
-    //     bytes32 user = entries[1].topics[1];
+     function testCollateralDepositEmitsOutput() public {
+        vm.recordLogs();
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateral(weth, amountCollateral);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 amount = entries[1].topics[3];
+        assert(amount > 0);
+    }
 
-    //     assert(address(user) != address(0));
-    // }
+    ////////////////////////////////////////
+    // depositCollateralAndMintDsc Tests ///
+    ////////////////////////////////////////
+
+    modifier depositedCollateralAndMintedDsc() {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
+        vm.stopPrank();
+        _;
+    }
+
+    function testCanMintWithDepositedCollateral() public depositedCollateralAndMintedDsc {
+        uint256 userBalance = dsc.balanceOf(user);
+        assertEq(userBalance, amountToMint);
+    }
 }
