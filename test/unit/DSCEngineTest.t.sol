@@ -11,7 +11,7 @@ import {MockMoreDebtDSC} from "../mocks/MockMoreDebtDSC.sol";
 // import {MockFailedMintDSC} from "../mocks/MockFailedMintDSC.sol";
 // import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 // import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {Test, console, Vm} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 
 contract DSCEngineTest is Test {
@@ -97,10 +97,10 @@ contract DSCEngineTest is Test {
     }
 
     function testRevertsWithUnapprovedCollateral() public {
-        ERC20Mock ranToken = new ERC20Mock();
+        ERC20Mock randToken = new ERC20Mock();
         vm.startPrank(user);
-        vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
-        dsce.depositCollateral(address(ranToken), amountCollateral);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector, address(randToken)));
+        dsce.depositCollateral(address(randToken), amountCollateral);
         vm.stopPrank();
     }
 
@@ -135,15 +135,15 @@ contract DSCEngineTest is Test {
         dsce.depositCollateral(weth, amountCollateral);
     }
 
-    //  function testCollateralDepositEmitsOutput() public {
-    //     vm.recordLogs();
-    //     vm.startPrank(user);
-    //     ERC20Mock(weth).approve(address(dsce), amountCollateral);
-    //     dsce.depositCollateral(weth, amountCollateral);
-    //     Vm.Log[] memory entries = vm.getRecordedLogs();
-    //     bytes32 amount = entries[1].topics[3];
-    //     assert(amount > 0);
-    // }
+     function testCollateralDepositEmitsOutput() public {
+        vm.recordLogs();
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateral(weth, amountCollateral);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 amount = entries[1].topics[3];
+        assert(amount > 0);
+    }
 
     ////////////////////////////////////////
     // depositCollateralAndMintDsc Tests ///
