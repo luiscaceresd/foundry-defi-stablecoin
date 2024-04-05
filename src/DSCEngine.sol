@@ -53,13 +53,13 @@ contract DSCEngine is ReentrancyGuard {
     //////////////
     // Errors //
     //////////////
+    error DSCEngine__TokenAddressesAndPriceFeedAddressesAmountsDontMatch();
     error DSCEngine__NeedsMoreThanZero();
-    error DSCengine__TokenAddressesAndPriceFeedAddressesMustBeSameLength();
-    error DSCEngine__TokenNotAllowed();
+    error DSCEngine__TokenNotAllowed(address token);
     error DSCEngine__TransferFailed();
-    error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__BreaksHealthFactor(uint256 healthFactorValue);
     error DSCEngine__MintFailed();
-    error DSCEngine__HeatlthFactorOk();
+    error DSCEngine__HealthFactorOk();
     error DSCEngine__HealthFactorNotImproved();
 
     //////////////////////
@@ -99,7 +99,7 @@ contract DSCEngine is ReentrancyGuard {
 
     modifier isAllowedToken(address token) {
         if (s_priceFeeds[token] == address(0)) {
-            revert DSCEngine__TokenNotAllowed();
+            revert DSCEngine__TokenNotAllowed(token);
         }
         _;
     }
@@ -110,7 +110,7 @@ contract DSCEngine is ReentrancyGuard {
     constructor(address[] memory tokenAddresses, address[] memory priceFeedAddress, address dscAddress) {
         // USD Price Feeds
         if (tokenAddresses.length != priceFeedAddress.length) {
-            revert DSCengine__TokenAddressesAndPriceFeedAddressesMustBeSameLength();
+            revert DSCEngine__TokenAddressesAndPriceFeedAddressesAmountsDontMatch();
         }
         // For example ETH / USD, BTC / USD, MKR / USD, etc
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
@@ -222,7 +222,7 @@ contract DSCEngine is ReentrancyGuard {
         // Need to check the health factor of the user
         uint256 startingUserHealthFactor = _healthFactor(user);
         if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
-            revert DSCEngine__HeatlthFactorOk();
+            revert DSCEngine__HealthFactorOk();
         }
         // We want to burn their DSC "debt" and take their collateral
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
@@ -305,6 +305,10 @@ contract DSCEngine is ReentrancyGuard {
         return (usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
     }
 
+    function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
+        return s_collateralDeposited[user][token];
+    }
+
     function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUsd) {
         // loop through each collateral token, get amount they have deposited, and map it to the price feed
         for (uint256 i = 0; i < s_collateralTokens.length; i++) {
@@ -344,19 +348,39 @@ contract DSCEngine is ReentrancyGuard {
         return PRECISION;
     }
 
-    function calculateHealthFactor(uint256 totalDscMinted, uint256 collateralValueInUsd)
-        external
-        pure
-        returns (uint256)
-    {
-        return _calculateHealthFactor(totalDscMinted, collateralValueInUsd);
+    function getAdditionalFeedPrecision() external pure returns (uint256) {
+        return ADDITIONAL_FEED_PRECISION;
     }
 
-    function getHealthFactor(address user) external view returns (uint256) {
-        return _healthFactor(user);
+    function getLiquidationThreshold() external pure returns (uint256) {
+        return LIQUIDATION_THRESHOLD;
     }
 
     function getLiquidationBonus() external pure returns (uint256) {
         return LIQUIDATION_BONUS;
+    }
+
+    function getLiquidationPrecision() external pure returns (uint256) {
+        return LIQUIDATION_PRECISION;
+    }
+
+    function getMinHealthFactor() external pure returns (uint256) {
+        return MIN_HEALTH_FACTOR;
+    }
+
+    function getCollateralTokens() external view returns (address[] memory) {
+        return s_collateralTokens;
+    }
+
+    function getDsc() external view returns (address) {
+        return address(i_dsc);
+    }
+
+    function getCollateralTokenPriceFeed(address token) external view returns (address) {
+        return s_priceFeeds[token];
+    }
+
+    function getHealthFactor(address user) external view returns (uint256) {
+        return _healthFactor(user);
     }
 }
