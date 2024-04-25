@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+pragma solidity ^0.8.20;
+
 // Have our invariants aka properties
 
 // What are our invariants?
@@ -7,8 +9,6 @@
 // 1. The total suply of DSC should be less than the total value of collateral
 
 // 2. Getter view functions should never revert <- evergreen invariant
-
-pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
